@@ -11,8 +11,6 @@ public interface IMongoLexer {
 	 * @param <V>
 	 */
 	public interface MongoSyntaxValue<V extends BsonValue> {
-		boolean isBeginToken(char c);
-
 		boolean isEndToken(char c);
 
 		int read(String json);

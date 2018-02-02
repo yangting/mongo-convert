@@ -3,7 +3,6 @@ package one.yate.matedata.mongo.lexer.parser;
 import one.yate.matedata.mongo.lexer.IMongoLexer;
 import one.yate.matedata.mongo.lexer.SyntaxToken;
 import org.bson.BsonArray;
-import org.bson.BsonNull;
 
 /**
  * @author yangting
@@ -19,16 +18,6 @@ public class ArrayValueParser implements IMongoLexer.MongoSyntaxValue <BsonArray
 		} else {
 			this.endToken = s;
 		}
-	}
-
-	@Override
-	public boolean isBeginToken(char c) {
-		for (SyntaxToken e : this.endToken) {
-			if (e.value == c) {
-				return true;
-			}
-		}
-		return false;
 	}
 
 	@Override
@@ -70,6 +59,10 @@ public class ArrayValueParser implements IMongoLexer.MongoSyntaxValue <BsonArray
 			} else if (marks > 0 && SyntaxToken.ARRAY_END.value == c || SyntaxToken.OBJECT_END.value == c) {
 				marks--;
 			}
+
+//			if (marks == 0 && isEndToken(c)) {
+//				break;
+//			}
 
 			if (marks == 0 && SyntaxToken.COMMA.value == c) {
 				if (tmp.charAt(0) == SyntaxToken.ARRAY_START.value) {
@@ -119,34 +112,4 @@ public class ArrayValueParser implements IMongoLexer.MongoSyntaxValue <BsonArray
 	public BsonArray getValues() {
 		return this.value;
 	}
-
-	public FlagAndValue buildVaule(String v, int flag) {
-		char c;
-		String tmp;
-		for (flag++; flag < v.length(); flag++) {
-			c = v.charAt(flag);
-			if (this.isIgnore(c)) {
-				continue;
-			}
-
-			if (SyntaxToken.OBJECT_START.value == c) {
-				tmp = v.substring(flag, v.length());
-				ObjectValueParser ov = new ObjectValueParser(SyntaxToken.OBJECT_END);
-				flag = flag + ov.read(tmp);
-				return new FlagAndValue(flag, ov.value);
-			} else if (SyntaxToken.ARRAY_START.value == c) {
-				tmp = v.substring(flag, v.length());
-				ArrayValueParser av = new ArrayValueParser(SyntaxToken.ARRAY_END);
-				flag = flag + av.read(tmp);
-				return new FlagAndValue(flag, av.value);
-			} else {
-				tmp = v.substring(flag, v.length());
-				SingleValueParser sv = new SingleValueParser(SyntaxToken.COMMA, SyntaxToken.OBJECT_END, SyntaxToken.ARRAY_END);
-				flag = flag + sv.read(tmp);
-				return new FlagAndValue(flag, sv.value);
-			}
-		}
-		return new FlagAndValue(flag, new BsonNull());
-	}
-
 }

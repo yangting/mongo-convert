@@ -22,14 +22,6 @@ public class ObjectValueParser implements IMongoLexer.MongoSyntaxValue <BsonDocu
 	}
 
 	@Override
-	public boolean isBeginToken(char c) {
-		if (SyntaxToken.OBJECT_START.value == c) {
-			return true;
-		}
-		return false;
-	}
-
-	@Override
 	public boolean isEndToken(char c) {
 		for (SyntaxToken e : this.endToken) {
 			if (e.value == c) {

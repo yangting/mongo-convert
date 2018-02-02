@@ -13,30 +13,30 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class Pojo2DocUtils {
 
-	private static final ConcurrentHashMap<Class, IBsonConvertor.IBsonDecoder> typeMappings = new ConcurrentHashMap<Class, IBsonConvertor.IBsonDecoder>();
+	private static final ConcurrentHashMap <Class, IBsonConvertor.IBsonDecoder> TYPE_MAPPINGS = new ConcurrentHashMap <Class, IBsonConvertor.IBsonDecoder>();
 
 	static {
 		//基本类型数据
-		typeMappings.put(String.class, new StringBsonDecoder());
-		typeMappings.put(int.class, new Int32BsonDecoder());
-		typeMappings.put(Integer.class, new Int32BsonDecoder());
-		typeMappings.put(long.class, new Int64BsonDecoder());
-		typeMappings.put(Long.class, new Int64BsonDecoder());
-		typeMappings.put(double.class, new DoubleBsonDecoder());
-		typeMappings.put(Double.class, new DoubleBsonDecoder());
-		typeMappings.put(boolean.class, new BooleanBsonDecoder());
-		typeMappings.put(Boolean.class, new BooleanBsonDecoder());
+		TYPE_MAPPINGS.put(String.class, new StringBsonVisitor());
+		TYPE_MAPPINGS.put(int.class, new Int32BsonVisitor());
+		TYPE_MAPPINGS.put(Integer.class, new Int32BsonVisitor());
+		TYPE_MAPPINGS.put(long.class, new Int64BsonVisitor());
+		TYPE_MAPPINGS.put(Long.class, new Int64BsonVisitor());
+		TYPE_MAPPINGS.put(double.class, new DoubleBsonVisitor());
+		TYPE_MAPPINGS.put(Double.class, new DoubleBsonVisitor());
+		TYPE_MAPPINGS.put(boolean.class, new BooleanBsonVisitor());
+		TYPE_MAPPINGS.put(Boolean.class, new BooleanBsonVisitor());
 
-		typeMappings.put(Date.class, new DateBsonDecoder());
+		TYPE_MAPPINGS.put(Date.class, new DateBsonVisitor());
 
 		//集合类
-		typeMappings.put(List.class, new ArrayBsonDecoder());
-		typeMappings.put(ArrayList.class, new ArrayBsonDecoder());
-		typeMappings.put(Map.class, new MapBsonDecoder());
-		typeMappings.put(HashMap.class, new MapBsonDecoder());
-		typeMappings.put(ConcurrentHashMap.class, new MapBsonDecoder());
+		TYPE_MAPPINGS.put(List.class, new ArrayBsonVisitor());
+		TYPE_MAPPINGS.put(ArrayList.class, new ArrayBsonVisitor());
+		TYPE_MAPPINGS.put(Map.class, new MapBsonVisitor());
+		TYPE_MAPPINGS.put(HashMap.class, new MapBsonVisitor());
+		TYPE_MAPPINGS.put(ConcurrentHashMap.class, new MapBsonVisitor());
 
-		typeMappings.put(Object.class, new ObjectBsonDecoder());
+		TYPE_MAPPINGS.put(Object.class, new ObjectBsonVisitor());
 	}
 
 	private Pojo2DocUtils() {
@@ -62,10 +62,10 @@ public final class Pojo2DocUtils {
 	 * @return
 	 * @throws IllegalAccessException
 	 */
-	public static BsonDocument buildPojo2Doc(final Object obj) throws IllegalAccessException {
+	public static BsonValue buildPojo2Doc(final Object obj) throws IllegalAccessException {
 		IBsonConvertor.IBsonDecoder bv = getDecoder(obj.getClass());
 		BsonValue v = bv.decoder(obj);
-		return (BsonDocument) v;
+		return v;
 	}
 
 	/**
@@ -91,11 +91,11 @@ public final class Pojo2DocUtils {
 	 * @return
 	 * @throws IllegalAccessException
 	 */
-	private static IBsonConvertor.IBsonDecoder getDecoder(Class<?> clazz) throws IllegalAccessException {
-		IBsonConvertor.IBsonDecoder r = typeMappings.get(clazz);
+	private static IBsonConvertor.IBsonDecoder getDecoder(Class <?> clazz) throws IllegalAccessException {
+		IBsonConvertor.IBsonDecoder r = TYPE_MAPPINGS.get(clazz);
 		if (r == null) {
 			//使用默认pojo类型
-			r = typeMappings.get(Object.class);
+			r = TYPE_MAPPINGS.get(Object.class);
 		}
 		return r;
 	}
@@ -103,7 +103,7 @@ public final class Pojo2DocUtils {
 	/**
 	 * string type
 	 */
-	private static class StringBsonDecoder implements IBsonConvertor.IBsonDecoder<String> {
+	private static class StringBsonVisitor implements IBsonConvertor.IBsonDecoder <String> {
 		@Override
 		public BsonString decoder(String v) throws IllegalAccessException {
 			return new BsonString(v);
@@ -113,35 +113,36 @@ public final class Pojo2DocUtils {
 	/**
 	 * int32 type
 	 */
-	private static class Int32BsonDecoder implements IBsonConvertor.IBsonDecoder<Integer> {
+	private static class Int32BsonVisitor implements IBsonConvertor.IBsonDecoder <Integer> {
 		@Override
 		public BsonInt32 decoder(Integer v) throws IllegalAccessException {
 			return new BsonInt32(v);
 		}
 	}
 
-	private static class Int64BsonDecoder implements IBsonConvertor.IBsonDecoder<Long> {
+	private static class Int64BsonVisitor implements IBsonConvertor.IBsonDecoder <Long> {
 		@Override
 		public BsonInt64 decoder(Long v) throws IllegalAccessException {
+			//会返回成 { "$numberLong" : "9223372036854775807" }对像 不知道为什么要这样？用string
 			return new BsonInt64(v);
 		}
 	}
 
-	private static class BooleanBsonDecoder implements IBsonConvertor.IBsonDecoder<Boolean> {
+	private static class BooleanBsonVisitor implements IBsonConvertor.IBsonDecoder <Boolean> {
 		@Override
 		public BsonBoolean decoder(Boolean v) throws IllegalAccessException {
 			return new BsonBoolean(v);
 		}
 	}
 
-	private static class DoubleBsonDecoder implements IBsonConvertor.IBsonDecoder<Double> {
+	private static class DoubleBsonVisitor implements IBsonConvertor.IBsonDecoder <Double> {
 		@Override
 		public BsonDouble decoder(Double v) throws IllegalAccessException {
 			return new BsonDouble(v);
 		}
 	}
 
-	private static class DateBsonDecoder implements IBsonConvertor.IBsonDecoder<Date> {
+	private static class DateBsonVisitor implements IBsonConvertor.IBsonDecoder <Date> {
 		@Override
 		public BsonDateTime decoder(Date v) throws IllegalAccessException {
 			return new BsonDateTime(v.getTime());
@@ -151,7 +152,7 @@ public final class Pojo2DocUtils {
 	/**
 	 * array type
 	 */
-	private static class ArrayBsonDecoder implements IBsonConvertor.IBsonDecoder<List> {
+	private static class ArrayBsonVisitor implements IBsonConvertor.IBsonDecoder <List> {
 		@Override
 		public BsonArray decoder(List v) throws IllegalAccessException {
 			BsonArray cur = new BsonArray();
@@ -166,12 +167,12 @@ public final class Pojo2DocUtils {
 	/**
 	 * map type
 	 */
-	private static class MapBsonDecoder implements IBsonConvertor.IBsonDecoder<Map<String, Object>> {
+	private static class MapBsonVisitor implements IBsonConvertor.IBsonDecoder <Map <String, Object>> {
 		@Override
-		public BsonDocument decoder(Map<String, Object> v) throws IllegalAccessException {
+		public BsonDocument decoder(Map <String, Object> v) throws IllegalAccessException {
 			BsonDocument cur = new BsonDocument();
 			Object obj;
-			for (Map.Entry<String, Object> e : v.entrySet()) {
+			for (Map.Entry <String, Object> e : v.entrySet()) {
 				obj = e.getValue();
 				if (obj != null) {
 					IBsonConvertor.IBsonDecoder bv = getDecoder(obj.getClass());
@@ -185,7 +186,7 @@ public final class Pojo2DocUtils {
 	/**
 	 * pojo type
 	 */
-	private static class ObjectBsonDecoder implements IBsonConvertor.IBsonDecoder<Object> {
+	private static class ObjectBsonVisitor implements IBsonConvertor.IBsonDecoder <Object> {
 		@Override
 		public BsonDocument decoder(Object v) throws IllegalAccessException {
 			if (v == null) {

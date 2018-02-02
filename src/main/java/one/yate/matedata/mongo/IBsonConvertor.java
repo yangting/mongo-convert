@@ -15,7 +15,7 @@ public interface IBsonConvertor {
 
 	@FunctionalInterface
 	public interface IBsonEncoder<B extends BsonValue> extends IBsonConvertor {
-		<R> R encoder(B docVal, Class<?> r) throws IllegalAccessException, InstantiationException;
+		<R> R encoder(B docVal, Class <?> r) throws IllegalAccessException, InstantiationException;
 	}
 
 }

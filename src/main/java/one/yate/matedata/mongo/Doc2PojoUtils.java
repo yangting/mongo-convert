@@ -12,25 +12,26 @@ import java.util.concurrent.ConcurrentHashMap;
  * @date 2018/1/17
  * BsonDoc 2 Pojo 方案解决，代码需不断更新 新类型的支持
  */
+
 public final class Doc2PojoUtils {
 
-	private static final ConcurrentHashMap<BsonType, IBsonConvertor.IBsonEncoder> typeMappings = new ConcurrentHashMap<BsonType, IBsonConvertor.IBsonEncoder>();
+	private static final ConcurrentHashMap <BsonType, IBsonConvertor.IBsonEncoder> TYPE_MAPPINGS = new ConcurrentHashMap <BsonType, IBsonConvertor.IBsonEncoder>();
 
-	private static final ObjectBsonEncoder objEncoder = new ObjectBsonEncoder();
+	private static final Doc2PojoUtils.ObjectBsonVisitor DEFAULT_OBJ_ENCODER = new Doc2PojoUtils.ObjectBsonVisitor();
 
 	static {
 		//基本类型数据
-		typeMappings.put(BsonType.STRING, new StringBsonEncoder());
-		typeMappings.put(BsonType.INT32, new Int32BsonEncoder());
-		typeMappings.put(BsonType.INT64, new Int64BsonEncoder());
-		typeMappings.put(BsonType.DOUBLE, new DoubleBsonEncoder());
-		typeMappings.put(BsonType.BOOLEAN, new BooleanBsonEncoder());
+		TYPE_MAPPINGS.put(BsonType.STRING, new Doc2PojoUtils.StringBsonVisitor());
+		TYPE_MAPPINGS.put(BsonType.INT32, new Doc2PojoUtils.Int32BsonVisitor());
+		TYPE_MAPPINGS.put(BsonType.INT64, new Doc2PojoUtils.Int64BsonVisitor());
+		TYPE_MAPPINGS.put(BsonType.DOUBLE, new Doc2PojoUtils.DoubleBsonVisitor());
+		TYPE_MAPPINGS.put(BsonType.BOOLEAN, new Doc2PojoUtils.BooleanBsonVisitor());
 
-		typeMappings.put(BsonType.DATE_TIME, new DateBsonEncoder());
+		TYPE_MAPPINGS.put(BsonType.DATE_TIME, new Doc2PojoUtils.DateBsonVisitor());
 
 		//集合类
-		typeMappings.put(BsonType.ARRAY, new ArrayBsonEncoder());
-		typeMappings.put(BsonType.DOCUMENT, new MapBsonEncoder());
+		TYPE_MAPPINGS.put(BsonType.ARRAY, new Doc2PojoUtils.ArrayBsonVisitor());
+		TYPE_MAPPINGS.put(BsonType.DOCUMENT, new Doc2PojoUtils.MapBsonVisitor());
 	}
 
 	private Doc2PojoUtils() {
@@ -49,12 +50,17 @@ public final class Doc2PojoUtils {
 	 * @throws NoSuchFieldException
 	 */
 
-	public static <T> T buildDoc2Pojo(BsonDocument doc, Class<T> clazz) throws IllegalAccessException, InstantiationException, NoSuchFieldException {
+	public static <T> Object buildDoc2Pojo(BsonValue doc, Class <T> clazz) throws IllegalAccessException, InstantiationException, NoSuchFieldException {
 		if (doc == null || clazz == null) {
 			throw new NullPointerException();
 		}
 
-		return (T) objEncoder.encoder(doc, clazz);
+		if (doc.getBsonType() == BsonType.DOCUMENT) {
+			return DEFAULT_OBJ_ENCODER.encoder((BsonDocument) doc, clazz);
+		}
+
+		return TYPE_MAPPINGS.get(doc.getBsonType()).encoder(doc, clazz);
+
 	}
 
 	private static boolean isMapType(Class f) {
@@ -66,8 +72,8 @@ public final class Doc2PojoUtils {
 			return true;
 		}
 
-		Class<?>[] p = f.getInterfaces();
-		for (Class<?> c : p) {
+		Class <?>[] p = f.getInterfaces();
+		for (Class <?> c : p) {
 			if (c == Map.class) {
 				return true;
 			} else {
@@ -85,12 +91,12 @@ public final class Doc2PojoUtils {
 	 * @throws IllegalAccessException
 	 */
 	private static IBsonConvertor.IBsonEncoder getEncoder(BsonType type) {
-		IBsonConvertor.IBsonEncoder r = typeMappings.get(type);
+		IBsonConvertor.IBsonEncoder r = TYPE_MAPPINGS.get(type);
 		return r;
 	}
 
 
-	private static class StringBsonEncoder implements IBsonConvertor.IBsonEncoder<BsonString> {
+	private static class StringBsonVisitor implements IBsonConvertor.IBsonEncoder <BsonString> {
 		@Override
 		public String encoder(BsonString docVal, Class clazz) throws IllegalAccessException {
 			if (docVal == null) {
@@ -100,7 +106,7 @@ public final class Doc2PojoUtils {
 		}
 	}
 
-	private static class Int32BsonEncoder implements IBsonConvertor.IBsonEncoder<BsonInt32> {
+	private static class Int32BsonVisitor implements IBsonConvertor.IBsonEncoder <BsonInt32> {
 		@Override
 		public Integer encoder(BsonInt32 docVal, Class clazz) throws IllegalAccessException {
 			if (docVal == null) {
@@ -110,7 +116,7 @@ public final class Doc2PojoUtils {
 		}
 	}
 
-	private static class Int64BsonEncoder implements IBsonConvertor.IBsonEncoder<BsonInt64> {
+	private static class Int64BsonVisitor implements IBsonConvertor.IBsonEncoder <BsonInt64> {
 		@Override
 		public Long encoder(BsonInt64 docVal, Class clazz) throws IllegalAccessException {
 			if (docVal == null) {
@@ -120,7 +126,7 @@ public final class Doc2PojoUtils {
 		}
 	}
 
-	private static class BooleanBsonEncoder implements IBsonConvertor.IBsonEncoder<BsonBoolean> {
+	private static class BooleanBsonVisitor implements IBsonConvertor.IBsonEncoder <BsonBoolean> {
 		@Override
 		public Boolean encoder(BsonBoolean docVal, Class clazz) throws IllegalAccessException {
 			if (docVal == null) {
@@ -130,7 +136,7 @@ public final class Doc2PojoUtils {
 		}
 	}
 
-	private static class DoubleBsonEncoder implements IBsonConvertor.IBsonEncoder<BsonDouble> {
+	private static class DoubleBsonVisitor implements IBsonConvertor.IBsonEncoder <BsonDouble> {
 		@Override
 		public Double encoder(BsonDouble docVal, Class clazz) throws IllegalAccessException {
 			if (docVal == null) {
@@ -140,7 +146,7 @@ public final class Doc2PojoUtils {
 		}
 	}
 
-	private static class DateBsonEncoder implements IBsonConvertor.IBsonEncoder<BsonDateTime> {
+	private static class DateBsonVisitor implements IBsonConvertor.IBsonEncoder <BsonDateTime> {
 		@Override
 		public Date encoder(BsonDateTime docVal, Class clazz) throws IllegalAccessException {
 			if (docVal == null) {
@@ -153,7 +159,7 @@ public final class Doc2PojoUtils {
 	/**
 	 * array type
 	 */
-	private static class ArrayBsonEncoder implements IBsonConvertor.IBsonEncoder<BsonArray> {
+	private static class ArrayBsonVisitor implements IBsonConvertor.IBsonEncoder <BsonArray> {
 		@Override
 		public List encoder(BsonArray docVal, Class clazz) throws IllegalAccessException, InstantiationException {
 			if (docVal == null) {
@@ -161,22 +167,29 @@ public final class Doc2PojoUtils {
 			}
 			List r = new ArrayList();
 			for (BsonValue bv : docVal.getValues()) {
-				r.add(getEncoder(bv.getBsonType()).encoder(bv, clazz));
+				if (bv.getBsonType() == BsonType.DOCUMENT && !isMapType(clazz)) {
+					r.add(DEFAULT_OBJ_ENCODER.encoder(bv.asDocument(), clazz));
+				} else {
+					r.add(getEncoder(bv.getBsonType()).encoder(bv, clazz));
+				}
 			}
 			return r;
 		}
 	}
 
-	private static class MapBsonEncoder implements IBsonConvertor.IBsonEncoder<BsonDocument> {
+	private static class MapBsonVisitor implements IBsonConvertor.IBsonEncoder <BsonDocument> {
 		@Override
-		public Map<String, Object> encoder(BsonDocument docVal, Class clazz) throws IllegalAccessException, InstantiationException {
+		public Object encoder(BsonDocument docVal, Class clazz) throws IllegalAccessException, InstantiationException {
 			if (docVal == null) {
 				throw new NullPointerException();
 			}
-			Map<String, Object> map = new HashMap<String, Object>();
-			for (Map.Entry<String, BsonValue> e : docVal.entrySet()) {
-				if (clazz != Map.class) {
-					map.put(e.getKey(), objEncoder.encoder((BsonDocument) e.getValue(), clazz));
+
+			Map <String, Object> map = new HashMap <String, Object>();
+			for (Map.Entry <String, BsonValue> e : docVal.entrySet()) {
+				if (e.getValue().getBsonType() == BsonType.DOCUMENT && !isMapType(clazz)) {
+					map.put(e.getKey(), DEFAULT_OBJ_ENCODER.encoder((BsonDocument) e.getValue(), clazz));
+				} else if (isMapType(clazz)) {
+					map.put(e.getKey(), getEncoder(e.getValue().getBsonType()).encoder(e.getValue(), clazz));
 				} else {
 					map.put(e.getKey(), getEncoder(e.getValue().getBsonType()).encoder(e.getValue(), clazz));
 				}
@@ -186,7 +199,7 @@ public final class Doc2PojoUtils {
 		}
 	}
 
-	private static class ObjectBsonEncoder implements IBsonConvertor.IBsonEncoder<BsonDocument> {
+	private static class ObjectBsonVisitor implements IBsonConvertor.IBsonEncoder <BsonDocument> {
 		@Override
 		public Object encoder(BsonDocument docVal, Class clazz) throws IllegalAccessException, InstantiationException {
 			if (docVal == null || clazz == null) {
@@ -209,9 +222,9 @@ public final class Doc2PojoUtils {
 						f.setAccessible(true);
 
 						if (helper != null) {
-							f.set(t, objEncoder.encoder((BsonDocument) bv, helper.encoderClass()));
+							f.set(t, DEFAULT_OBJ_ENCODER.encoder((BsonDocument) bv, helper.encoderClass()));
 						} else {
-							f.set(t, objEncoder.encoder((BsonDocument) bv, f.getType()));
+							f.set(t, DEFAULT_OBJ_ENCODER.encoder((BsonDocument) bv, f.getType()));
 						}
 					} else {
 						f.setAccessible(true);

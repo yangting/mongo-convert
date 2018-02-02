@@ -26,14 +26,6 @@ public class SingleValueParser implements IMongoLexer.MongoSyntaxValue <BsonValu
 	}
 
 	@Override
-	public boolean isBeginToken(char c) {
-		if (SyntaxToken.DOUBLE_QUOTATION_MARKS.value == c) {
-			return true;
-		}
-		return false;
-	}
-
-	@Override
 	public boolean isEndToken(char c) {
 		for (SyntaxToken e : this.endToken) {
 			if (e.value == c) {
